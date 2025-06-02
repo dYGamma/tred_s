@@ -1,6 +1,6 @@
 // src/pages/posts/[slug].tsx
 
-import { GetStaticPaths, GetStaticProps } from "next";
+import { GetServerSideProps } from "next";
 import Head from "next/head";
 import Link from "next/link";
 
@@ -10,7 +10,7 @@ import { serialize } from "next-mdx-remote/serialize";
 import Layout from "../../components/Layout";
 import TableOfContents from "../../components/TableOfContents";
 
-import { getAllPosts, getPostBySlug, PostMeta } from "../../lib/getAllPosts";
+import { getAllPostsFromDB, getPostBySlugFromDB, PostMeta } from "../../lib/db";
 import { mdxOptions } from "../../lib/mdxUtils";
 
 // Точная часть метаданных, которую передаём в props
@@ -175,41 +175,35 @@ export default function PostPage({
   );
 }
 
-export const getStaticPaths: GetStaticPaths = async () => {
-  const posts = getAllPosts();
-  const paths = posts.map((post) => ({
-    params: { slug: post.slug },
-  }));
-  return {
-    paths,
-    fallback: false,
-  };
-};
-
-export const getStaticProps: GetStaticProps<PostPageProps> = async ({ params }) => {
+export const getServerSideProps: GetServerSideProps<PostPageProps> = async ({
+  params,
+}) => {
   const slug = params?.slug as string;
-  const post = getPostBySlug(slug);
+  // Читаем все посты (для Prev/Next) и текущий пост из /data/posts
+  const allPosts = getAllPostsFromDB();
+  const post = getPostBySlugFromDB(slug);
 
-  // Сериализуем MDX-контент
-  const mdxSource = await serialize(post.content, {
+  if (!post) {
+    return { notFound: true };
+  }
+
+  // Сериализуем MDX-контент, передаём плагины внутри mdxOptions
+  const mdxSource = await serialize(post.content || "", {
     mdxOptions: {
       remarkPlugins: mdxOptions.remarkPlugins,
-      rehypePlugins: mdxOptions.rehypePlugins as unknown as any[],
+      rehypePlugins: mdxOptions.rehypePlugins as any,
     },
   });
 
-  const allPosts = getAllPosts();
-
-  // Передаём в frontMatter только те поля, которые нужны странице
   const frontMatter: PostFrontMatter = {
     slug: post.slug,
     title: post.title,
     date: post.date,
     description: post.description,
     tags: post.tags,
-    author: post.author,
-    readingTime: post.readingTime,
-    coverImage: post.coverImage,
+    author: (post as any).author || null,
+    readingTime: (post as any).readingTime || "0 min",
+    coverImage: (post as any).coverImage || null,
   };
 
   return {

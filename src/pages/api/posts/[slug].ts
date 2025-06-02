@@ -4,8 +4,8 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import fs from "fs";
 import path from "path";
 import matter from "gray-matter";
+import readingTime from "reading-time";
 
-// Интерфейс тела запроса для PUT (обновления поста)
 interface UpdatePostBody {
   type: "update";
   secret: string;
@@ -14,6 +14,8 @@ interface UpdatePostBody {
     date: string;
     description?: string;
     tags?: string[];
+    author?: string;
+    coverImage?: string;
     content: string;
   };
 }
@@ -27,7 +29,6 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
   const postsDir = path.join(process.cwd(), "src", "posts");
   const filePath = path.join(postsDir, `${slug}.mdx`);
 
-  // 1) GET: вернуть содержимое одного поста
   if (method === "GET") {
     if (!fs.existsSync(filePath)) {
       return res.status(404).json({ error: "Пост не найден" });
@@ -35,46 +36,61 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     try {
       const fileContents = fs.readFileSync(filePath, "utf-8");
       const { data, content } = matter(fileContents);
-      return res
-        .status(200)
-        .json({ slug, frontMatter: data, content });
+      const rt = readingTime(content).text;
+
+      return res.status(200).json({
+        slug,
+        frontMatter: {
+          title: data.title,
+          date: data.date,
+          description: data.description || "",
+          tags: Array.isArray(data.tags) ? data.tags : [],
+          author: data.author || null,
+          readingTime: rt,
+          coverImage: data.coverImage || null,
+        },
+        content,
+      });
     } catch (e) {
       console.error(e);
       return res.status(500).json({ error: "Не удалось прочитать файл" });
     }
   }
 
-  // 2) PUT: обновить существующий пост
   if (method === "PUT") {
     const body: UpdatePostBody = req.body;
-
-    // Проверяем секрет
     if (!body.secret || body.secret !== process.env.ADMIN_SECRET) {
       return res.status(401).json({ error: "Неверный секрет" });
     }
-
-    // Проверка существования файла
     if (!fs.existsSync(filePath)) {
       return res.status(404).json({ error: "Пост не найден" });
     }
-
     if (body.type !== "update") {
       return res.status(400).json({ error: "Неверный тип запроса" });
     }
 
-    const { title, date, description, tags, content } = body.data || {};
+    const {
+      title,
+      date,
+      description,
+      tags,
+      author,
+      coverImage,
+      content,
+    } = body.data || {};
     if (!title || !date || !content) {
       return res
         .status(400)
         .json({ error: "Поля title, date и content обязательны" });
     }
 
-    // Собираем YAML‐фронт‐маттер
     const frontMatterObj: Record<string, any> = {
       title,
       date,
       description: description || "",
       tags: Array.isArray(tags) ? tags : [],
+      author: author || null,
+      coverImage: coverImage || null,
     };
     const mdxWithFM = matter.stringify(content, frontMatterObj);
 
@@ -87,17 +103,14 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     }
   }
 
-  // 3) DELETE: удалить существующий пост
   if (method === "DELETE") {
     const { secret } = req.body || {};
     if (!secret || secret !== process.env.ADMIN_SECRET) {
       return res.status(401).json({ error: "Неверный секрет" });
     }
-
     if (!fs.existsSync(filePath)) {
       return res.status(404).json({ error: "Пост не найден" });
     }
-
     try {
       fs.unlinkSync(filePath);
       return res.status(200).json({ ok: true });
@@ -107,7 +120,6 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     }
   }
 
-  // Другие методы не поддерживаем
   res.setHeader("Allow", "GET, PUT, DELETE");
   return res.status(405).json({ error: "Метод не разрешён" });
 }

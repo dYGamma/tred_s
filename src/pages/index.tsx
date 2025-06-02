@@ -1,16 +1,16 @@
 // src/pages/index.tsx
 
 import { useEffect, useState, useRef } from "react";
-import { GetStaticProps } from "next";
+import { GetServerSideProps } from "next";
 import Layout from "../components/Layout";
 import PostCard from "../components/PostCard";
-import { getAllPosts, PostMeta } from "../lib/getAllPosts";
+import { getAllPostsFromDB, PostMeta } from "../lib/db";
 
 interface HomeProps {
   posts: PostMeta[];
 }
 
-// Базовый ASCII-арт-заголовок (можно расширить или заменить свой)
+// Базовый ASCII-арт-заголовок (копирован из исходника)
 const baseAscii = [
   "███████╗██╗  ██╗██╗███████╗ ██████╗ ██████╗ ███████╗███╗   ██╗██╗███╗   ██╗██╗",
   "██╔════╝██║  ██║██║██╔════╝██╔════╝██╔═══██╗██╔════╝████╗  ██║██║████╗  ██║██║",
@@ -90,23 +90,37 @@ export default function Home({ posts }: HomeProps) {
       </header>
 
       <p className="mt-2 text-gray-600 dark:text-gray-400">
-          Здесь всё немного шуршит в фоновом режиме…
+        Здесь всё немного шуршит в фоновом режиме…
       </p>
 
       <section className="w-full px-4">
         <div className="mx-auto max-w-2xl space-y-12">
           {posts.map((post) => (
-            <PostCard key={post.slug} {...post} />
+            <PostCard
+              key={post.slug}
+              slug={post.slug}
+              title={post.title}
+              date={post.date}
+              // В карточке используется excerpt и description, поэтому дублируем:
+              excerpt={post.description}
+              description={post.description}
+              tags={post.tags}
+              // Заглушки для остальных обязательных полей, чтобы визуал не сломался:
+              author={""}
+              readingTime={""}
+              coverImage={null}
+              content={""}
+            />
           ))}
         </div>
       </section>
-      
     </Layout>
   );
 }
 
-export const getStaticProps: GetStaticProps<HomeProps> = async () => {
-  const posts = getAllPosts();
+export const getServerSideProps: GetServerSideProps<HomeProps> = async () => {
+  // Берём посты “на лету” из /data/posts
+  const posts = getAllPostsFromDB();
   return {
     props: {
       posts,
