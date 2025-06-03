@@ -23,7 +23,6 @@ const baseAscii = [
 const noiseChars = ["@", "#", "$", "%", "&", "*", "?", "~", "■", "▯", "▢", "▓", "▒", "░"];
 
 function getRandomColorClass() {
-  // Массив Tailwind-классов с «тревожными» цветами для эффекта глитча
   const colors = [
     "text-red-500",
     "text-green-400",
@@ -36,7 +35,6 @@ function getRandomColorClass() {
 }
 
 function glitchLine(line: string, intensity: number): string {
-  // intensity — вероятность (0–1) замены символа на «шум»
   return line
     .split("")
     .map((ch) => {
@@ -51,19 +49,17 @@ function glitchLine(line: string, intensity: number): string {
 function AsciiGlitch() {
   const [glitchLines, setGlitchLines] = useState<string[]>(baseAscii);
   const [colorClass, setColorClass] = useState<string>("text-green-400");
-  const intensityRef = useRef(0.0); // начальная «интенсивность» глитча
+  const intensityRef = useRef(0.0);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      // Периодически меняем «интенсивность» и цвет
-      const newIntensity = Math.random() * 0.3; // до 30% символов могут глючить
+      const newIntensity = Math.random() * 0.3; 
       intensityRef.current = newIntensity;
       setColorClass(getRandomColorClass());
 
-      // Генерируем новый массив строк с глитч-эффектом
       const newLines = baseAscii.map((ln) => glitchLine(ln, newIntensity));
       setGlitchLines(newLines);
-    }, 200); // обновляем 5 раз в секунду
+    }, 200);
 
     return () => clearInterval(interval);
   }, []);
@@ -84,7 +80,6 @@ export default function Home({ posts }: HomeProps) {
   return (
     <Layout title="Все посты" description="Список всех публикаций блога">
       <header className="mb-12 text-center">
-        {/* Скрываем <h1> для SEO, сам заголовок рендерит AsciiGlitch */}
         <h1 className="sr-only">Шизобредни</h1>
         <AsciiGlitch />
       </header>
@@ -101,11 +96,9 @@ export default function Home({ posts }: HomeProps) {
               slug={post.slug}
               title={post.title}
               date={post.date}
-              // В карточке используется excerpt и description, поэтому дублируем:
               excerpt={post.description}
               description={post.description}
               tags={post.tags}
-              // Заглушки для остальных обязательных полей, чтобы визуал не сломался:
               author={""}
               readingTime={""}
               coverImage={null}

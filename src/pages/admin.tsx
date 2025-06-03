@@ -1,9 +1,7 @@
-// src/pages/admin.tsx
-
+// File: src/pages/admin.tsx
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/router";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import slugify from "slugify";
@@ -27,15 +25,14 @@ interface FrontMatterForm {
 type Mode = "login" | "list" | "create" | "edit";
 
 export default function AdminPage() {
-  const router = useRouter();
-
   // 1. Аутентификация
-  const [secret, setSecret] = useState("");
+  const [secret, setSecret] = useState("");                // для поля ввода
+  const [storedSecret, setStoredSecret] = useState("");    // храним сюда пароль после успешного логина
   const [authenticated, setAuthenticated] = useState(false);
   const [mode, setMode] = useState<Mode>("login");
   const [error, setError] = useState<string | null>(null);
 
-  // 2. CRUD-состояния
+  // 2. CRUD‐состояния
   const [posts, setPosts] = useState<PostMeta[]>([]);
   const [filteredPosts, setFilteredPosts] = useState<PostMeta[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -47,14 +44,14 @@ export default function AdminPage() {
     tags: "",
     slug: "",
   });
-  const [content, setContent] = useState(""); // MDX-контент
+  const [content, setContent] = useState(""); // MDX‐контент
   const [isLoading, setIsLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // 3. Перенесли хук viewMode наверх, чтобы он вызывался всегда
+  // 3. Хук viewMode (edit / preview)
   const [viewMode, setViewMode] = useState<"edit" | "preview">("edit");
 
-  // 4. После логина — fetch списка
+  // 4. После логина — fetch списка постов
   useEffect(() => {
     if (authenticated) {
       fetchPosts();
@@ -77,7 +74,7 @@ export default function AdminPage() {
     }
   }, [searchQuery, posts]);
 
-  // 6. Функция: получить список постов
+  // 6. GET /api/posts — получить список постов
   const fetchPosts = async () => {
     setIsLoading(true);
     try {
@@ -98,24 +95,45 @@ export default function AdminPage() {
     }
   };
 
-  // 7. Обработка логина
+  // 7. Обработка логина — POST /api/auth
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    if (
-      secret === process.env.NEXT_PUBLIC_ADMIN_SECRET ||
-      secret === ("" + (process.env.ADMIN_SECRET || ""))
-    ) {
-      setAuthenticated(true);
-      setMode("list");
+    if (!secret.trim()) {
+      setError("Введите пароль");
       return;
-    } else {
-      setError("Неверный пароль");
+    }
+
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ secret }),
+      });
+      if (res.ok) {
+        // 1) Сохраняем пароль в storedSecret
+        setStoredSecret(secret);
+        // 2) Устанавливаем authenticated = true и переключаем режим на list
+        setAuthenticated(true);
+        setMode("list");
+      } else if (res.status === 401) {
+        setError("Неверный пароль");
+      } else {
+        setError("Ошибка аутентификации");
+      }
+    } catch (e) {
+      console.error(e);
+      setError("Сетевая ошибка при логине");
+    } finally {
+      setIsLoading(false);
+      // только очищаем поле ввода, но не трогаем storedSecret
+      setSecret("");
     }
   };
 
-  // 8. Удаление поста
+  // 8. Удаление поста — DELETE /api/posts/[slug]
   const handleDelete = async (slug: string) => {
     if (!confirm(`Вы уверены, что хотите удалить "${slug}"?`)) return;
     setError(null);
@@ -125,7 +143,7 @@ export default function AdminPage() {
       const res = await fetch(`/api/posts/${slug}`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ secret }),
+        body: JSON.stringify({ secret: storedSecret }), // передаём storedSecret
       });
       if (res.ok) {
         setSuccessMsg(`Пост "${slug}" удалён`);
@@ -157,7 +175,7 @@ export default function AdminPage() {
     setError(null);
     setSuccessMsg(null);
     setMode("create");
-    setViewMode("edit"); // сбрасываем viewMode для нового поста
+    setViewMode("edit"); // сбрасываем viewMode
   };
 
   // 10. Открыть форму «Редактировать»
@@ -166,7 +184,7 @@ export default function AdminPage() {
     setIsLoading(true);
     setError(null);
     setSuccessMsg(null);
-    setViewMode("edit"); // сбрасываем viewMode
+    setViewMode("edit");
     try {
       const res = await fetch(`/api/posts/${slug}`);
       if (res.ok) {
@@ -194,7 +212,7 @@ export default function AdminPage() {
     }
   };
 
-  // 11. Сбросить форму и вернуться к списку
+  // 11. Отмена формы и возврат к списку
   const cancelForm = () => {
     setSelectedSlug(null);
     setContent("");
@@ -211,7 +229,7 @@ export default function AdminPage() {
     setViewMode("edit");
   };
 
-  // 12. Генерация slug на основе title + date (для создание)
+  // 12. Генерация slug на основе title + date (при создании)
   useEffect(() => {
     if (mode === "create") {
       const { title, date } = frontMatterForm;
@@ -246,7 +264,7 @@ export default function AdminPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             type: "create",
-            secret,
+            secret: storedSecret, // передаём storedSecret
             data: {
               title,
               date,
@@ -266,13 +284,12 @@ export default function AdminPage() {
           setError(json.error || "Ошибка при создании поста");
         }
       } else if (mode === "edit" && selectedSlug) {
-        // Обновляем метаданные и контент, но не меняем filename
         const res = await fetch(`/api/posts/${selectedSlug}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             type: "update",
-            secret,
+            secret: storedSecret, // передаём storedSecret
             data: {
               title,
               date,
@@ -301,7 +318,7 @@ export default function AdminPage() {
     }
   };
 
-  // 14. Загрузка изображения
+  // 14. Загрузка изображения — POST /api/upload
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     setError(null);
     if (!e.target.files || e.target.files.length === 0) return;
@@ -339,9 +356,7 @@ export default function AdminPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
         <form onSubmit={handleAuth} className="glass-card p-8 w-full max-w-sm">
-          <h1 className="text-2xl font-bold mb-4 dark:text-white">
-            Admin Login
-          </h1>
+          <h1 className="text-2xl font-bold mb-4 dark:text-white">Admin Login</h1>
           {error && <p className="text-red-600 mb-2">{error}</p>}
           <label className="block mb-2">
             <span className="text-gray-700 dark:text-gray-300">Пароль:</span>
@@ -351,13 +366,11 @@ export default function AdminPage() {
               onChange={(e) => setSecret(e.target.value)}
               className="mt-1 block w-full rounded-md bg-white/40 dark:bg-gray-800/40 border border-gray-300 dark:border-gray-600 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 backdrop-blur-sm"
               placeholder="Введите секретный пароль"
+              disabled={isLoading}
             />
           </label>
-          <button
-            type="submit"
-            className="btn-primary w-full text-center"
-          >
-            Войти
+          <button type="submit" className="btn-primary w-full text-center" disabled={isLoading}>
+            {isLoading ? "Проверка..." : "Войти"}
           </button>
         </form>
       </div>
@@ -371,11 +384,7 @@ export default function AdminPage() {
         <div className="container mx-auto max-w-4xl">
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-3xl font-bold dark:text-white">Admin Panel</h1>
-            <button
-              onClick={openCreateForm}
-              className="btn-primary px-4 py-2"
-              disabled={isLoading}
-            >
+            <button onClick={openCreateForm} className="btn-primary px-4 py-2" disabled={isLoading}>
               {isLoading ? <span className="spinner"></span> : "Создать новый пост"}
             </button>
           </div>
@@ -390,6 +399,7 @@ export default function AdminPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="search-input"
+              disabled={isLoading}
             />
           </div>
 
@@ -413,18 +423,10 @@ export default function AdminPage() {
                     </Link>
                   </td>
                   <td>
-                    <button
-                      onClick={() => openEditForm(post.slug)}
-                      className="text-blue-600 hover:underline mr-2"
-                      disabled={isLoading}
-                    >
+                    <button onClick={() => openEditForm(post.slug)} className="text-blue-600 hover:underline mr-2" disabled={isLoading}>
                       Edit
                     </button>
-                    <button
-                      onClick={() => handleDelete(post.slug)}
-                      className="text-red-600 hover:underline"
-                      disabled={isLoading}
-                    >
+                    <button onClick={() => handleDelete(post.slug)} className="text-red-600 hover:underline" disabled={isLoading}>
                       Delete
                     </button>
                   </td>
@@ -450,14 +452,8 @@ export default function AdminPage() {
       <div className="container mx-auto max-w-3xl">
         <div className="glass-card p-8 mb-6">
           <div className="flex justify-between items-center mb-4">
-            <h1 className="text-2xl font-bold dark:text-white">
-              {mode === "create" ? "Создать новый пост" : "Редактировать пост"}
-            </h1>
-            <button
-              onClick={cancelForm}
-              className="text-gray-600 dark:text-gray-300 hover:underline"
-              disabled={isLoading}
-            >
+            <h1 className="text-2xl font-bold dark:text-white">{mode === "create" ? "Создать новый пост" : "Редактировать пост"}</h1>
+            <button onClick={cancelForm} className="text-gray-600 dark:text-gray-300 hover:underline" disabled={isLoading}>
               Назад к списку
             </button>
           </div>
@@ -467,9 +463,7 @@ export default function AdminPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Title */}
             <div>
-              <label className="block mb-1 text-gray-700 dark:text-gray-300">
-                Заголовок (title):
-              </label>
+              <label className="block mb-1 text-gray-700 dark:text-gray-300">Заголовок (title):</label>
               <input
                 type="text"
                 value={frontMatterForm.title}
@@ -487,9 +481,7 @@ export default function AdminPage() {
 
             {/* Date */}
             <div>
-              <label className="block mb-1 text-gray-700 dark:text-gray-300">
-                Дата (YYYY-MM-DD):
-              </label>
+              <label className="block mb-1 text-gray-700 dark:text-gray-300">Дата (YYYY-MM-DD):</label>
               <input
                 type="date"
                 value={frontMatterForm.date}
@@ -507,9 +499,7 @@ export default function AdminPage() {
             {/* Slug (только при создании) */}
             {mode === "create" && (
               <div>
-                <label className="block mb-1 text-gray-700 dark:text-gray-300">
-                  Slug (автогенерируется, но можно изменить):
-                </label>
+                <label className="block mb-1 text-gray-700 dark:text-gray-300">Slug (автогенерируется, но можно изменить):</label>
                 <input
                   type="text"
                   value={frontMatterForm.slug}
@@ -532,20 +522,14 @@ export default function AdminPage() {
             {/* Slug (при редактировании, только для справки) */}
             {mode === "edit" && (
               <div>
-                <label className="block mb-1 text-gray-700 dark:text-gray-300">
-                  Текущий Slug:
-                </label>
-                <p className="mt-1 text-gray-700 dark:text-gray-300 font-mono">
-                  {frontMatterForm.slug}
-                </p>
+                <label className="block mb-1 text-gray-700 dark:text-gray-300">Текущий Slug:</label>
+                <p className="mt-1 text-gray-700 dark:text-gray-300 font-mono">{frontMatterForm.slug}</p>
               </div>
             )}
 
             {/* Description */}
             <div>
-              <label className="block mb-1 text-gray-700 dark:text-gray-300">
-                Описание (description):
-              </label>
+              <label className="block mb-1 text-gray-700 dark:text-gray-300">Описание (description):</label>
               <textarea
                 value={frontMatterForm.description}
                 onChange={(e) =>
@@ -562,9 +546,7 @@ export default function AdminPage() {
 
             {/* Tags */}
             <div>
-              <label className="block mb-1 text-gray-700 dark:text-gray-300">
-                Теги (через запятую):
-              </label>
+              <label className="block mb-1 text-gray-700 dark:text-gray-300">Теги (через запятую):</label>
               <input
                 type="text"
                 value={frontMatterForm.tags}
@@ -610,16 +592,8 @@ export default function AdminPage() {
 
             {/* Загрузка картинки */}
             <div>
-              <label className="block mb-1 text-gray-700 dark:text-gray-300">
-                Загрузить картинку:
-              </label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleImageUpload}
-                className="admin-input"
-                disabled={isLoading}
-              />
+              <label className="block mb-1 text-gray-700 dark:text-gray-300">Загрузить картинку:</label>
+              <input type="file" accept="image/*" onChange={handleImageUpload} className="admin-input" disabled={isLoading} />
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                 Файл будет загружен в `/public/uploads`, и ссылка вставится в текст.
               </p>
@@ -628,25 +602,11 @@ export default function AdminPage() {
             {/* Переключатель «Редактор / Превью» */}
             <div className="view-mode-toggle flex items-center gap-4 mt-4">
               <label>
-                <input
-                  type="radio"
-                  name="viewMode"
-                  value="edit"
-                  checked={viewMode === "edit"}
-                  onChange={() => setViewMode("edit")}
-                  disabled={isLoading}
-                />
+                <input type="radio" name="viewMode" value="edit" checked={viewMode === "edit"} onChange={() => setViewMode("edit")} disabled={isLoading} />
                 <span className="ml-1">Редактор</span>
               </label>
               <label>
-                <input
-                  type="radio"
-                  name="viewMode"
-                  value="preview"
-                  checked={viewMode === "preview"}
-                  onChange={() => setViewMode("preview")}
-                  disabled={isLoading}
-                />
+                <input type="radio" name="viewMode" value="preview" checked={viewMode === "preview"} onChange={() => setViewMode("preview")} disabled={isLoading} />
                 <span className="ml-1">Превью</span>
               </label>
             </div>
@@ -654,9 +614,7 @@ export default function AdminPage() {
             {/* Контент или превью */}
             {viewMode === "edit" ? (
               <div>
-                <label className="block mb-1 text-gray-700 dark:text-gray-300">
-                  Содержимое (MDX):
-                </label>
+                <label className="block mb-1 text-gray-700 dark:text-gray-300">Содержимое (MDX):</label>
                 <textarea
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
@@ -671,11 +629,7 @@ export default function AdminPage() {
               </div>
             )}
 
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="btn-primary w-full text-center"
-            >
+            <button type="submit" disabled={isLoading} className="btn-primary w-full text-center">
               {isLoading ? <span className="spinner"></span> : mode === "create" ? "Создать пост" : "Сохранить изменения"}
             </button>
           </form>

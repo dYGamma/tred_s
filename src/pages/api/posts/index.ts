@@ -21,7 +21,6 @@ interface CreatePostBody {
 }
 
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
-  // Делаем ровно так же: src/posts, а не /data/posts
   const postsDir = path.join(process.cwd(), "src", "posts");
 
   if (!fs.existsSync(postsDir)) {

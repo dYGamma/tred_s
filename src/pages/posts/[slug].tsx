@@ -13,7 +13,6 @@ import TableOfContents from "../../components/TableOfContents";
 import { getAllPostsFromDB, getPostBySlugFromDB, PostMeta } from "../../lib/db";
 import { mdxOptions } from "../../lib/mdxUtils";
 
-// Точная часть метаданных, которую передаём в props
 interface PostFrontMatter {
   slug: string;
   title: string;
@@ -25,7 +24,6 @@ interface PostFrontMatter {
   coverImage: string | null;
 }
 
-// Пропсы страницы
 interface PostPageProps {
   mdxSource: MDXRemoteSerializeResult;
   frontMatter: PostFrontMatter;
@@ -37,7 +35,6 @@ export default function PostPage({
   frontMatter,
   allPosts,
 }: PostPageProps) {
-  // Находим индекс текущего поста в списке, чтобы вывести Prev/Next
   const currentIndex = allPosts.findIndex((p) => p.slug === frontMatter.slug);
   const prevPost =
     currentIndex < allPosts.length - 1 ? allPosts[currentIndex + 1] : null;
@@ -58,7 +55,6 @@ export default function PostPage({
         <meta property="og:site_name" content="My Blog" />
       </Head>
 
-      {/* ОБЁРНУТЫЙ В POST-КЛАСС */}
       <article className="post">
         <header>
           {/* 1) Заголовок */}
@@ -89,7 +85,6 @@ export default function PostPage({
           )}
         </header>
 
-        {/* 4) Обложка (если есть) */}
         {frontMatter.coverImage && (
           <div className="post-cover">
             <img
@@ -99,7 +94,6 @@ export default function PostPage({
           </div>
         )}
 
-        {/* 5) Основной контент (MDXRemote) */}
         <div className="post-content">
           <div className="prose dark:prose-invert max-w-none">
             <MDXRemote {...mdxSource} />
@@ -115,7 +109,6 @@ export default function PostPage({
                 className="button link"
                 style={{ marginRight: "auto" }}
               >
-                {/* SVG-стрелка влево */}
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   width="16"
@@ -143,7 +136,6 @@ export default function PostPage({
                 style={{ marginLeft: "auto" }}
               >
                 {nextPost.title}
-                {/* SVG-стрелка вправо */}
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   width="16"
