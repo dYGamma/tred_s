@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import Layout from "../../components/Layout";
-import { GetStaticProps } from "next";
+import { GetServerSideProps } from "next";
 import { getAllPosts, PostMeta } from "../../lib/getAllPosts";
 
 interface TagsIndexProps {
@@ -14,7 +14,6 @@ interface TagsIndexProps {
 export default function TagsIndex({ tags, tagCounts }: TagsIndexProps) {
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Фильтрация тегов по введённой строке
   const filteredTags = useMemo(() => {
     if (!searchTerm.trim()) return tags;
     const lower = searchTerm.trim().toLowerCase();
@@ -23,17 +22,8 @@ export default function TagsIndex({ tags, tagCounts }: TagsIndexProps) {
 
   return (
     <Layout title="Все теги" description="Список всех тегов с поиском">
-      {/* 
-        Обёртка, центрирующая окно с тегами между шапкой и футером.
-        Содержимое .glass-card выровнено по левому краю.
-      */}
       <div className="tags-center-wrapper">
         <div className="glass-card p-8">
-          {/* <h1 className="text-2xl font-bold mb-4 dark:text-white">
-            Все теги
-          </h1> */}
-
-          {/* Поисковая строка */}
           <div className="mb-6">
             <input
               type="text"
@@ -43,8 +33,6 @@ export default function TagsIndex({ tags, tagCounts }: TagsIndexProps) {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-
-          {/* Список отфильтрованных тегов. justify-start выравнивает их по левому краю */}
           {filteredTags.length > 0 ? (
             <ul className="flex flex-wrap justify-start gap-2">
               {filteredTags.map((tag) => (
@@ -65,8 +53,6 @@ export default function TagsIndex({ tags, tagCounts }: TagsIndexProps) {
           ) : (
             <p className="text-gray-700 dark:text-gray-300">Теги не найдены.</p>
           )}
-
-          {/* Ссылка «← Главная» */}
           <div className="centered-link">
             <Link
               href="/"
@@ -77,13 +63,13 @@ export default function TagsIndex({ tags, tagCounts }: TagsIndexProps) {
           </div>
         </div>
       </div>
-      {/* Footer («© 2025 ShizBlog.») рендерится внутри Layout ниже этого блока */}
     </Layout>
   );
 }
 
-export const getStaticProps: GetStaticProps<TagsIndexProps> = async () => {
-  const posts: PostMeta[] = getAllPosts();
+// Вместо SSG — SSR. Пересчитываем теги/счётчики при каждом запросе.
+export const getServerSideProps: GetServerSideProps<TagsIndexProps> = async () => {
+  const posts: PostMeta[] = getAllPosts(); // Читает из /app/src/posts
 
   // Считаем, сколько раз встречается каждый тег
   const tagCounts: Record<string, number> = {};
@@ -93,7 +79,7 @@ export const getStaticProps: GetStaticProps<TagsIndexProps> = async () => {
     });
   });
 
-  // Вытаскиваем уникальные теги и сортируем их по алфавиту
+  // Уникальные теги по алфавиту
   const tags = Object.keys(tagCounts).sort((a, b) =>
     a.toLowerCase().localeCompare(b.toLowerCase())
   );
