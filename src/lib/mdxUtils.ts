@@ -1,6 +1,6 @@
 // src/lib/mdxUtils.ts
 
-import remarkGfm from "remark-gfm";
+// import remarkGfm from "remark-gfm";
 import rehypeSlug from "rehype-slug";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import rehypePrism from "rehype-prism-plus";
@@ -16,7 +16,7 @@ import rehypePrism from "rehype-prism-plus";
  *  - rehype-prism-plus: подсветка синтаксиса кода через Prism.js
  */
 export const mdxOptions = {
-  remarkPlugins: [remarkGfm],
+  remarkPlugins: [],
   rehypePlugins: [
     rehypeSlug,
     [

@@ -1,0 +1,47 @@
+# Файл docker-compose.yml
+
+# Версия синтаксиса
+version: '3.8'
+
+# Здесь мы описываем все наши сервисы (контейнеры)
+services:
+
+  # Первый сервис: ваше Next.js приложение
+  next-app:
+    # Указываем Docker Compose собрать образ, используя Dockerfile из текущей директории
+    build: .
+    # Даем имя нашему образу
+    image: tred-blog-app
+    # Даем имя контейнеру для удобства
+    container_name: my-blog-container
+    # Указываем файл с переменными окружения
+    env_file:
+      - .env.local
+    # Монтируем папки с хоста внутрь контейнера.
+    # Это позволяет сохранять посты и картинки даже после удаления контейнера.
+    volumes:
+      - ./src/posts:/app/src/posts
+      - ./public/uploads:/app/public/uploads
+    # ВАЖНО: Мы НЕ пробрасываем порты наружу. Доступ к приложению будет только у Nginx.
+
+  # Второй сервис: Nginx
+  nginx:
+    # Используем готовый официальный образ Nginx
+    image: nginx:1.25-alpine
+    container_name: my-blog-nginx
+    # Пробрасываем порт 3100 на вашем сервере (хосте) на порт 80 внутри контейнера Nginx.
+    # Именно через порт 3100 вы будете заходить на свой сайт.
+    ports:
+      - "3100:80"
+    # Монтируем файлы и папки
+    volumes:
+      # 1. Нашу конфигурацию nginx.conf в папку, где Nginx ищет конфигурации
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+      # 2. Ту же самую папку с загрузками, что и для next-app.
+      #    Nginx будет брать из нее файлы и отдавать пользователям.
+      #    Путь /var/www/uploads/ должен совпадать с `alias` в nginx.conf
+      - ./public/uploads:/var/www/uploads
+    # Указываем, что сервис nginx зависит от сервиса next-app.
+    # Docker Compose сначала запустит next-app, а потом nginx.
+    depends_on:
+      - next-app

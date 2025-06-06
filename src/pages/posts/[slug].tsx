@@ -3,15 +3,51 @@
 import { GetServerSideProps } from "next";
 import Head from "next/head";
 import Link from "next/link";
-
 import { MDXRemote, MDXRemoteSerializeResult } from "next-mdx-remote";
 import { serialize } from "next-mdx-remote/serialize";
 
 import Layout from "../../components/Layout";
 import TableOfContents from "../../components/TableOfContents";
 
-import { getAllPostsFromDB, getPostBySlugFromDB, PostMeta } from "../../lib/db";
+import { getAllPostsFromDB, getPostBySlugFromDB, PostMeta as OriginalPostMeta } from "../../lib/db";
 import { mdxOptions } from "../../lib/mdxUtils";
+/**
+ * Возвращает правильное склонение слова "минута".
+ * @param number - количество минут
+ * @returns Строка "минута", "минуты" или "минут"
+ */
+function pluralizeMinutes(number: number): string {
+  const lastDigit = number % 10;
+  const lastTwoDigits = number % 100;
+
+  if (lastTwoDigits >= 11 && lastTwoDigits <= 19) {
+    return "минут";
+  }
+  if (lastDigit === 1) {
+    return "минута";
+  }
+  if ([2, 3, 4].includes(lastDigit)) {
+    return "минуты";
+  }
+  return "минут";
+}
+
+/**
+ * Рассчитывает примерное время чтения статьи (на русском языке).
+ * @param content - Текст статьи (MDX-код, включая разметку).
+ * @returns Строка с временем чтения, например "5 минут на чтение".
+ */
+function calculateReadingTime(content: string): string {
+  if (!content) {
+    return `1 ${pluralizeMinutes(1)} на чтение`;
+  }
+
+  const wordsPerMinute = 180; // Средняя скорость чтения для русского языка
+  const words = content.trim().split(/\s+/).length;
+  const time = Math.ceil(words / wordsPerMinute);
+
+  return `${time} ${pluralizeMinutes(time)} на чтение`;
+}
 
 interface PostFrontMatter {
   slug: string;
@@ -22,6 +58,10 @@ interface PostFrontMatter {
   author: string | null;
   readingTime: string;
   coverImage: string | null;
+}
+
+export interface PostMeta extends OriginalPostMeta {
+  content: string;
 }
 
 interface PostPageProps {
@@ -50,7 +90,7 @@ export default function PostPage({
         <meta property="og:type" content="article" />
         <meta
           property="og:url"
-          content={`https://<your-username>.github.io/<repo-name>/posts/${frontMatter.slug}`}
+          content={`https://<your-domain>/posts/${frontMatter.slug}`}
         />
         <meta property="og:site_name" content="My Blog" />
       </Head>
@@ -69,7 +109,9 @@ export default function PostPage({
                 day: "numeric",
               })}
             </time>
-            {frontMatter.author && <span> — Written by {frontMatter.author}</span>}
+            {frontMatter.author && (
+              <span> — Written by {frontMatter.author}</span>
+            )}
             <span> — {frontMatter.readingTime}</span>
           </div>
 
@@ -102,7 +144,10 @@ export default function PostPage({
 
         {/* Prev / Next */}
         {(prevPost || nextPost) && (
-          <nav className="pagination pagination__buttons" style={{ marginTop: "40px" }}>
+          <nav
+            className="pagination pagination__buttons"
+            style={{ marginTop: "40px" }}
+          >
             {prevPost ? (
               <Link
                 href={`/posts/${prevPost.slug}/`}
@@ -171,16 +216,21 @@ export const getServerSideProps: GetServerSideProps<PostPageProps> = async ({
   params,
 }) => {
   const slug = params?.slug as string;
-  // Читаем все посты (для Prev/Next) и текущий пост из /data/posts
-  const allPosts = getAllPostsFromDB();
-  const post = getPostBySlugFromDB(slug);
+  const allPostsRaw = getAllPostsFromDB();
+  const postRaw = getPostBySlugFromDB(slug);
 
-  if (!post) {
+  if (!postRaw) {
     return { notFound: true };
   }
 
-  // Сериализуем MDX-контент, передаём плагины внутри mdxOptions
-  const mdxSource = await serialize(post.content || "", {
+  const post: PostMeta = {
+    ...postRaw,
+    content: postRaw.content || "",
+  };
+
+  const rusReadingTime = calculateReadingTime(post.content);
+
+  const mdxSource = await serialize(post.content, {
     mdxOptions: {
       remarkPlugins: mdxOptions.remarkPlugins,
       rehypePlugins: mdxOptions.rehypePlugins as any,
@@ -193,16 +243,19 @@ export const getServerSideProps: GetServerSideProps<PostPageProps> = async ({
     date: post.date,
     description: post.description,
     tags: post.tags,
-    author: (post as any).author || null,
-    readingTime: (post as any).readingTime || "0 min",
-    coverImage: (post as any).coverImage || null,
+    author: post.author || null,
+    readingTime: rusReadingTime,
+    coverImage: post.coverImage || null,
   };
 
   return {
     props: {
       mdxSource,
       frontMatter,
-      allPosts,
+      allPosts: allPostsRaw.map((p) => ({
+        ...p,
+        content: p.content || "",
+      })),
     },
   };
 };
