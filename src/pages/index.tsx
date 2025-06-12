@@ -1,3 +1,4 @@
+// src\pages\index.tsx
 import { useEffect, useState, useRef } from "react";
 import { GetServerSideProps } from "next";
 import Layout from "../components/Layout";
