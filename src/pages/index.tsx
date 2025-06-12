@@ -51,90 +51,90 @@ interface HomeProps {
   posts: PostMeta[];
 }
 
-const baseAscii = [
-  "███████╗██╗  ██╗██╗███████╗ ██████╗ ██████╗ ███████╗███╗   ██╗██╗███╗   ██╗██╗",
-  "██╔════╝██║  ██║██║██╔════╝██╔════╝██╔═══██╗██╔════╝████╗  ██║██║████╗  ██║██║",
-  "███████╗███████║██║█████╗  ██║     ██║   ██║█████╗  ██╔██╗ ██║██║██╔██╗ ██║██║",
-  "╚════██║██╔══██║██║██╔══╝  ██║     ██║   ██║██╔══╝  ██║╚██╗██║██║██║╚██╗██║╚═╝",
-  "███████║██║  ██║██║███████╗╚██████╗╚██████╔╝███████╗██║ ╚████║██║██║ ╚████║██╗",
-  "╚══════╝╚═╝  ╚═╝╚═╝╚══════╝ ╚═════╝ ╚═════╝ ╚══════╝╚═╝  ╚═══╝╚═╝╚═╝  ╚═══╝╚═╝",
-];
+// const baseAscii = [
+//   "███████╗██╗  ██╗██╗███████╗ ██████╗ ██████╗ ███████╗███╗   ██╗██╗███╗   ██╗██╗",
+//   "██╔════╝██║  ██║██║██╔════╝██╔════╝██╔═══██╗██╔════╝████╗  ██║██║████╗  ██║██║",
+//   "███████╗███████║██║█████╗  ██║     ██║   ██║█████╗  ██╔██╗ ██║██║██╔██╗ ██║██║",
+//   "╚════██║██╔══██║██║██╔══╝  ██║     ██║   ██║██╔══╝  ██║╚██╗██║██║██║╚██╗██║╚═╝",
+//   "███████║██║  ██║██║███████╗╚██████╗╚██████╔╝███████╗██║ ╚████║██║██║ ╚████║██╗",
+//   "╚══════╝╚═╝  ╚═╝╚═╝╚══════╝ ╚═════╝ ╚═════╝ ╚══════╝╚═╝  ╚═══╝╚═╝╚═╝  ╚═══╝╚═╝",
+// ];
 
-const noiseChars = ["@", "#", "$", "%", "&", "*", "?", "~", "■", "▯", "▢", "▓", "▒", "░"];
+// const noiseChars = ["@", "#", "$", "%", "&", "*", "?", "~", "■", "▯", "▢", "▓", "▒", "░"];
 
-function getRandomColorClass() {
-  const colors = [
-    "text-red-500",
-    "text-green-400",
-    "text-yellow-400",
-    "text-pink-500",
-    "text-purple-400",
-    "text-blue-300",
-  ];
-  return colors[Math.floor(Math.random() * colors.length)];
-}
+// function getRandomColorClass() {
+//   const colors = [
+//     "text-red-500",
+//     "text-green-400",
+//     "text-yellow-400",
+//     "text-pink-500",
+//     "text-purple-400",
+//     "text-blue-300",
+//   ];
+//   return colors[Math.floor(Math.random() * colors.length)];
+// }
 
-function glitchLine(line: string, intensity: number): string {
-  return line
-    .split("")
-    .map((ch) => {
-      if (/\s/.test(ch)) return ch; // пробелы не трогать
-      return Math.random() < intensity
-        ? noiseChars[Math.floor(Math.random() * noiseChars.length)]
-        : ch;
-    })
-    .join("");
-}
+// function glitchLine(line: string, intensity: number): string {
+//   return line
+//     .split("")
+//     .map((ch) => {
+//       if (/\s/.test(ch)) return ch; // пробелы не трогать
+//       return Math.random() < intensity
+//         ? noiseChars[Math.floor(Math.random() * noiseChars.length)]
+//         : ch;
+//     })
+//     .join("");
+// }
 
-function AsciiGlitch() {
-  const [glitchLines, setGlitchLines] = useState<string[]>(baseAscii);
-  const [colorClass, setColorClass] = useState<string>("text-green-400");
-  const [isMobile, setIsMobile] = useState(false);
-  const intensityRef = useRef(0.0);
+// function AsciiGlitch() {
+//   const [glitchLines, setGlitchLines] = useState<string[]>(baseAscii);
+//   const [colorClass, setColorClass] = useState<string>("text-green-400");
+//   const [isMobile, setIsMobile] = useState(false);
+//   const intensityRef = useRef(0.0);
 
-  useEffect(() => {
-    const checkIsMobile = () => {
-      setIsMobile(window.innerWidth < 684);
-    };
+//   useEffect(() => {
+//     const checkIsMobile = () => {
+//       setIsMobile(window.innerWidth < 684);
+//     };
 
-    checkIsMobile();
+//     checkIsMobile();
 
-    window.addEventListener("resize", checkIsMobile);
-    return () => window.removeEventListener("resize", checkIsMobile);
-  }, []);
+//     window.addEventListener("resize", checkIsMobile);
+//     return () => window.removeEventListener("resize", checkIsMobile);
+//   }, []);
 
-  useEffect(() => {
-    if (isMobile) {
-      return;
-    }
+//   useEffect(() => {
+//     if (isMobile) {
+//       return;
+//     }
 
-    const interval = setInterval(() => {
-      const newIntensity = Math.random() * 0.3;
-      intensityRef.current = newIntensity;
-      setColorClass(getRandomColorClass());
+//     const interval = setInterval(() => {
+//       const newIntensity = Math.random() * 0.3;
+//       intensityRef.current = newIntensity;
+//       setColorClass(getRandomColorClass());
 
-      const newLines = baseAscii.map((ln) => glitchLine(ln, newIntensity));
-      setGlitchLines(newLines);
-    }, 200);
+//       const newLines = baseAscii.map((ln) => glitchLine(ln, newIntensity));
+//       setGlitchLines(newLines);
+//     }, 200);
 
-    return () => clearInterval(interval);
-  }, [isMobile]);
+//     return () => clearInterval(interval);
+//   }, [isMobile]);
 
-  if (isMobile) {
-    return null;
-  }
+//   if (isMobile) {
+//     return null;
+//   }
 
-  return (
-    <pre
-      className={`leading-tight font-mono whitespace-pre-wrap text-center overflow-x-auto ${colorClass} bg-black/80 py-4 px-2 rounded-md`}
-      style={{ fontSize: "0.75rem", lineHeight: "0.9rem" }}
-    >
-      {glitchLines.map((ln, i) => (
-        <div key={i}>{ln}</div>
-      ))}
-    </pre>
-  );
-}
+//   return (
+//     <pre
+//       className={`leading-tight font-mono whitespace-pre-wrap text-center overflow-x-auto ${colorClass} bg-black/80 py-4 px-2 rounded-md`}
+//       style={{ fontSize: "0.75rem", lineHeight: "0.9rem" }}
+//     >
+//       {glitchLines.map((ln, i) => (
+//         <div key={i}>{ln}</div>
+//       ))}
+//     </pre>
+//   );
+// }
 
 export default function Home({ posts }: HomeProps) {
   return (
@@ -142,7 +142,7 @@ export default function Home({ posts }: HomeProps) {
       <header className="mb-12 text-center">
         {/* Заголовок для скрин-ридеров остается, а визуальный компонент отключается на мобильных */}
         <h1 className="sr-only">Шизобредни</h1>
-        <AsciiGlitch />
+        {/* <AsciiGlitch /> */}
       </header>
 
       <p className="mt-2 text-gray-600 dark:text-gray-400">
