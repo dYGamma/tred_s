@@ -10,7 +10,7 @@ interface SEOProps {
 
 export default function SEO({ title, description }: SEOProps) {
   // Название сайта по умолчанию
-  const siteName = "My Blog";
+  const siteName = "SHIZBLOG";
   // Текущий путь (для построения канонических URL)
   const pathname = usePathname() || "/";
   // Полный заголовок: "Заголовок страницы | My Blog"
@@ -24,7 +24,7 @@ export default function SEO({ title, description }: SEOProps) {
     <Head>
       {/* Базовые мета-теги */}
       <title>{fullTitle}</title>
-      <meta name="description" content={description || "My personal blog"} />
+      <meta name="description" content={description || "SHIZA"} />
       <link rel="canonical" href={canonicalUrl} />
 
       {/* Open Graph (Facebook, LinkedIn и пр.) */}
@@ -34,16 +34,16 @@ export default function SEO({ title, description }: SEOProps) {
       <meta property="og:url" content={canonicalUrl} />
       <meta property="og:site_name" content={siteName} />
       {/* Подставьте собственную картинку для превью при шаринге */}
-      <meta property="og:image" content={`${siteUrl}/images/og-image.png`} />
+      <meta property="og:image" content={`${siteUrl}public/images/og-image.png`} />
 
       {/* Twitter Card */}
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:title" content={fullTitle} />
       <meta name="twitter:description" content={description || ""} />
-      <meta name="twitter:image" content={`${siteUrl}/images/og-image.png`} />
+      <meta name="twitter:image" content={`${siteUrl}public/images/og-image.png`} />
 
       {/* Favicon */}
-      <link rel="icon" href="/favicon.ico" />
+      <link rel="icon" href="public/favicon.ico" />
       {/* Apple Touch Icon */}
       <link rel="apple-touch-icon" href="/images/logo.png" />
 

@@ -2,65 +2,109 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
-
-/**
- * DarkModeToggle
- *
- * Компонент переключателя светлого/тёмного режима для Next.js +
- * Tailwind CSS. Хранит выбор пользователя в localStorage и
- * автоматически подгружает предпочтения системы при первом рендере.
- *
- * Применяется класс "dark" к элементу <html> для активации темной темы,
- * так как в tailwind.config.js указан `darkMode: 'class'`.
- */
+import { useEffect, useLayoutEffect, useState, useCallback } from "react";
 
 export default function DarkModeToggle() {
-  // Состояние текущей темы (true = dark, false = light)
-  const [isDark, setIsDark] = useState(false);
+  // isDark === true – включена тёмная тема, false – светлая, null – ещё не инициализировали
+  const [isDark, setIsDark] = useState<boolean | null>(null);
 
-  // При монтировании компонента:
-  useEffect(() => {
-    // Проверяем, был ли ранее сохранён выбор темы
-    const savedTheme = localStorage.getItem("theme");
-    if (savedTheme === "dark") {
-      document.documentElement.classList.add("dark");
-      setIsDark(true);
-    } else if (savedTheme === "light") {
-      document.documentElement.classList.remove("dark");
-      setIsDark(false);
-    } else {
-      // Если выбор не сохранён, используем системные настройки
-      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      if (prefersDark) {
-        document.documentElement.classList.add("dark");
-        setIsDark(true);
-      }
-    }
+  // Утилитарные функции для переключения класса на <html>
+  const enableDark = useCallback(() => {
+    document.documentElement.classList.add("dark");
+    setIsDark(true);
   }, []);
 
-  // Обработчик клика по кнопке
-  const toggleTheme = () => {
-    const htmlClassList = document.documentElement.classList;
-    if (htmlClassList.contains("dark")) {
-      htmlClassList.remove("dark");
-      localStorage.setItem("theme", "light");
-      setIsDark(false);
+  const enableLight = useCallback(() => {
+    document.documentElement.classList.remove("dark");
+    setIsDark(false);
+  }, []);
+
+  // При монтировании компонента: сразу до рендера (useLayoutEffect), пытаемся выставить тему
+  useLayoutEffect(() => {
+    try {
+      const saved = localStorage.getItem("theme");
+      if (saved === "dark") {
+        enableDark();
+        return;
+      } else if (saved === "light") {
+        enableLight();
+        return;
+      }
+    } catch {
+      // Если доступ к localStorage неожиданно запрещён, просто продолжаем далее
+    }
+
+    // Если явно не было сохранённого значения – смотрим системные настройки
+    const mql = window.matchMedia("(prefers-color-scheme: dark)");
+    if (mql.matches) {
+      enableDark();
     } else {
-      htmlClassList.add("dark");
-      localStorage.setItem("theme", "dark");
-      setIsDark(true);
+      enableLight();
+    }
+  }, [enableDark, enableLight]);
+
+  // После того как установлена тема, подписываемся на изменения системных настроек, если у пользователя нет своего сохранённого выбора
+  useEffect(() => {
+    let mql: MediaQueryList;
+    try {
+      const saved = localStorage.getItem("theme");
+      if (saved === "dark" || saved === "light") {
+        // Пользователь явно выбирал ранее – не подписываемся на событие
+        return;
+      }
+      mql = window.matchMedia("(prefers-color-scheme: dark)");
+      const listener = (e: MediaQueryListEvent) => {
+        if (e.matches) {
+          enableDark();
+        } else {
+          enableLight();
+        }
+      };
+      mql.addEventListener("change", listener);
+      return () => {
+        mql.removeEventListener("change", listener);
+      };
+    } catch {
+      // Если что-то пошло не так (например, доступ к localStorage или matchMedia запрещён),
+      // просто ничего не делаем
+      return;
+    }
+  }, [enableDark, enableLight]);
+
+  // Обработчик клика: переключаем тему и сохраняем выбор в localStorage
+  const toggleTheme = () => {
+    if (isDark) {
+      enableLight();
+      try {
+        localStorage.setItem("theme", "light");
+      } catch {}
+    } else {
+      enableDark();
+      try {
+        localStorage.setItem("theme", "dark");
+      } catch {}
     }
   };
+
+  // Пока тема не определена, ничего не рендерим (избегаем «мигания»)
+  if (isDark === null) {
+    return null;
+  }
 
   return (
     <button
       onClick={toggleTheme}
-      aria-label="Переключить светлый/тёмный режим"
-      className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-blue-300 transition-colors"
+      aria-label={isDark ? "Переключиться на светлую тему" : "Переключиться на тёмную тему"}
+      className="
+        p-2 rounded-full
+        hover:bg-gray-200 dark:hover:bg-gray-700
+        focus:outline-none focus:ring-2 focus:ring-offset-2
+        focus:ring-blue-500 dark:focus:ring-blue-300
+        transition-colors
+      "
     >
       {isDark ? (
-        // Иконка "Солнце" для выхода из темной темы
+        // Иконка "Солнце" для выхода из тёмной темы
         <svg
           xmlns="http://www.w3.org/2000/svg"
           className="h-6 w-6 text-yellow-400"

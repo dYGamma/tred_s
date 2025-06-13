@@ -120,7 +120,7 @@ export default function Header() {
 
           {/* Иконка «Обо мне» */}
           <a
-            href="http://83.217.213.172/"
+            href="http://88.210.11.121:3200/"
             target="_blank"
             rel="noopener noreferrer"
             className="
