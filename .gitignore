@@ -4,14 +4,45 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Next.js build output
 .next/
 out/
 
-# Local environment variables
 .env.local
 
-# MacOS
 .DS_Store
 
 /src/generated/prisma
+
+
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+.env*
+!.env.example
+
+.next/
+out/
+
+*.tsbuildinfo
+
+logs/
+*.log
+
+.DS_Store
+Thumbs.db
+
+.vscode/
+.idea/
+
+*.local
+docker-compose.override.yml
+
+dist/
+build/
+
+coverage/
+
+.eslintcache
